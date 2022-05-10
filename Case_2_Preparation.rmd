@@ -1,0 +1,228 @@
+---
+title: "Case_2_Preparation"
+output: html_document
+---
+
+Data Upload (TRAINING: 95% - "prcc f" or "prcc c" (=share prices) given)
+```{r}
+setwd("C:/Users/kasim/Downloads")
+alldata = read.csv("compu.csv")
+```
+
+Data Upload (TESTING: 5%)
+```{r}
+# Available AFTER the assignment was handed in
+```
+
+Library Upload
+```{r}
+library(dplyr)
+library(tidyr)
+library(readr)
+library(tibble)
+library(readxl)
+library(ggplot2)
+library(DataCombine)
+library(SciViews)
+library(psych)
+library(corrgram) 
+library(latex2exp)
+library(tinytex)
+library(moments)
+```
+
+
+# TO-DO LIST:
+
+CREATE VARIABLES OF INTEREST
+
+PART 1.
+[CHECK SUMMARY STATISTICS FOR QUANTILES ON VARIABLES OF INTEREST (2018, rm.na)]
+
+Clean the data for one year. Every team will work with data for a
+different fiscal year. The formula for the year your team will work with is:
+fyear = 2000 + 4 × tutor group + team = 2000 + 4 x 3 + 1 = _2013_
+
+Support your decisions with summary statistics, scatter graphs, density plots or other evi-
+dence you think is relevant
+
+*What to do with missing values? Delete or is there a sensible way to impute?
+
+*What are logical lower and upper bounds?
+
+*What to do with outliers?
+
+*Are outliers in one variable related to a particular characteristic in another variable?
+With corporate finance data it is often the case that small firms are very different. You
+may want to exclude tiny firms.
+
+*With each filter that you apply, how many observations do you lose for each variable?
+
+*How many observations remain in the cross section?
+
+
+PART 2.
+
+Calculate PE-ratio (cf. Notes)
+
+For this assignment your team will work with data for the fiscal year:
+fyear = 2004 + 4 × tutor group = 2004 + 4 x 3 = _2016_
+
+CREATE A MODEL:
+Predict PE-ratio based on: ROA, Size, and inv [also try ROE instead of ROA]
+
+Answer:
+
+(a) "you cannot use MTB as an explanatory variable (why not?)"
+
+(b) "The regression output tells us that big (large size), profitable (high ROA) firms have a lower PE ratio, whereas firms that are growing fast (high inv) tend to have a higher PE ratio. Does that make economic sense?"
+
+CREATE A MODEL WITH LOG/ WINSORISED PE-ratio (this is not the goal of this investigation)
+
+=> BEAT THIS MODEL WITH DECISION TREES; KNN; RANDOM FORRESTS OR COMBINATIONS OF THEM
+
+Do these predictions for "computestpublic.csv" and capture them (SAVE AS A SEPARATE .csv file)
+
+
+
+
+
+# QUESTIONS:
+
+ARE THE QUESTIONS LISTED THE "CONCRETE TO-DOs"?
+
+Are "earnings before extraordinary items" the "Earnings" we consider in Part 2?
+
+Which filter, which cross-section?
+
+Are "accounting variables" predictive variables?
+
+How do the selected _years_ from Part 1 and 2 relate? Is it two different types of exercises?
+
+Shall we exclude firms with negative 3-year-earnings for the model?
+
+If target is continuous, how should we use decision trees/ kNN?
+
+
+# NOTES:
+
+Part 1 - Cleaning: 
+The quartiles refer to p.81 in the Finance-book
+
+Part 2 - Valuation:
+$PE or Price-Earnings-Ratio = Share Price/ Earnings per share$
+
+PE-ratios help to value a firm which has no historical data;
+‘In the _method of comparables_ we estimate the value of the firm
+based on the value of other, comparable firms or investments’
+
+‘Thus, we can estimate the value of a firms’s share by multiplying its current
+earnings per share by the average P/E ratio of comparable firms.’ (cf. Calculation above)
+
+The _Method of comparables_ assumes Earnings > 0 => Firms rarely have negative earnings for several years (without going bankrupt) => Use cross-sectional data for _3 years_:
+
+$$PE_{it} = \frac{Price_{it}} {EPS_{it} + EPS_{i,t−1} + EPS_{i,t−2}}$$
+
+
+The test data does not contain information for the "Share Prices" => Predict these
+
+You are asked to make predictions for the PE ratio with 3-year earnings for all firms in the test sample that have non-missing earnings data for the last three years, and have positive cumulative 3-year earnings
+
+=> That means we will only evaluate your model on those data where the actual PE ratio is positive. Since you observe the earnings in the test sample, you only need to make predictions for the data with valid 3-year earnings.
+
+=> The full test sample including the share prices will be released after all teams have submitted their work. That file will be called computest.csv. We ask you to take these data, construct the PE-ratio using the share price information, load your previously saved predictions, and compute your loss using the actual and predicted PE ratios. We will give a bonus point for the case for the team with the best predictions.
+
+_Target variable should be continuous_ 
+
+
+# POTENTIALLY INTERESTING CODE
+
+```{r}
+# Random forest:
+set.seed(7)
+fit.rf <- train(diabetes~., data=PimaIndiansDiabetes, method="rf", trControl=control)
+# Alternative:
+ozone.rf <- randomForest(Ozone ~ ., data = airquality, mtry = 3,
+                         importance = TRUE, na.action = na.omit)
+# Plot the error vs the number of trees graph
+plot(ozone.rf)
+
+# LDA
+set.seed(7)
+fit.lda <- train(diabetes~., data=PimaIndiansDiabetes, method="lda", trControl=control)
+# SVM
+set.seed(7)
+fit.svm <- train(diabetes~., data=PimaIndiansDiabetes, method="svmRadial", trControl=control)
+# Capturing model results:
+results <- resamples(list(CART=fit.cart, LDA=fit.lda, SVM=fit.svm, KNN=fit.knn, RF=fit.rf))
+# density plots of accuracy
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+densityplot(results, scales=scales, pch = "|")
+# pair-wise scatterplots of predictions to compare models
+splom(results)
+
+# Neural Networks in RR
+# load the package
+library(nnet)
+data(iris)
+# fit model
+fit <- nnet(Species~., data=iris, size=4, decay=0.0001, maxit=500)
+# summarize the fit
+summary(fit)
+# make predictions
+predictions <- predict(fit, iris[,1:4], type="class")
+# summarize accuracy
+table(predictions, iris$Species)
+```
+
+K-FOLD CROSS VALIDATION:
+```{r}
+library(tidyverse)
+library(caret)
+install.packages("ISLR")
+library(ISLR)
+
+train_control <- trainControl(method = "cv",
+                              number = 10)
+ 
+# E.g., NAIVE BAYES 
+model <- train(Direction~., data = dataset,
+               trControl = train_control,
+               method = "nb")
+
+
+# summarize results of the
+# model after calculating
+# prediction error in each case
+print(model)
+
+# For regressions:
+install.packages("datarium")
+data("marketing", package = "datarium")
+
+set.seed(125) 
+ 
+# defining training control
+# as cross-validation and 
+# value of K equal to 10
+train_control <- trainControl(method = "cv",
+                              number = 10)
+ 
+# training the model by assigning sales column
+# as target variable and rest other column
+# as independent variable
+model <- train(sales ~., data = marketing, 
+               method = "lm",
+               trControl = train_control)
+print(model)
+```
+
+ENSEMBLE MODELS:
+```{r}
+fit.lr = glm(y~x1+x2+x3+x4, family = binomial, data = d)
+fit.rf = randomForest(as.factor(y)~x1+x2+x3+x4, data = d, ntree = 100, proximity = FALSE)
+g.lr.sig = function(x, y) predict(fit.lr, data.frame(x1 = x, x2 = y, x3 = 0, x4 = 0), type = "response") <br>
+g.rf.sig = function(x, y) predict(fit.rf, data.frame(x1 = x, x2 = y, x3 = 0, x4 = 0), type = "prob")[, 2] <br>
+g.en.sig = function(x, y) 0.5*g.lr.sig(x, y) + 0.5*g.rf.sig(x, y)<br>
+```
+
